@@ -90,7 +90,6 @@ resources:
     PokeFrontendBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: poke-frontend-bucket
         AccessControl: PublicRead
         WebsiteConfiguration:
           IndexDocument: index.html
