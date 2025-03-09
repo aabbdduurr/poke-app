@@ -14,6 +14,8 @@ function Login() {
     try {
       const response = await axios.post(`${BACKEND_URL}/login`, { phone });
       console.log("OTP sent: ", response.data.otp); // Demo only; remove in production
+      // show a toast or alert with the OTP
+      window.alert(`OTP sent: ${response.data.otp}`);
       setOtpSent(true);
     } catch (error) {
       console.error("Login failed", error);
