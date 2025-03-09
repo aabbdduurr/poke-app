@@ -1,0 +1,61 @@
+.pokelog-container {
+  padding: 20px;
+  background-color: #f5f5f5;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+}
+
+.pokelog-title {
+  margin-bottom: 20px;
+}
+
+.pokelog-section {
+  margin-bottom: 30px;
+}
+
+.pokelog-section h2 {
+  margin-bottom: 10px;
+}
+
+.pokelog-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pokelog-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 10px;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.pokelog-item:hover {
+  background-color: #eaeaea;
+}
+
+.pokelog-sender,
+.pokelog-recipient {
+  font-size: 1em;
+  font-weight: bold;
+  color: #333;
+}
+
+.pokelog-button {
+  padding: 8px 12px;
+  font-size: 0.9em;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #4caf50;
+  color: #fff;
+}
+
+.pokelog-button:hover {
+  background-color: #45a049;
+}

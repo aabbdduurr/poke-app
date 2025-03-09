@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { BACKEND_URL } from "../Constants";
+import "./PokeLog.css"; // Import the CSS
 
 const PokeLog = () => {
   const [pokes, setPokes] = useState([]);
@@ -66,23 +67,32 @@ const PokeLog = () => {
   };
 
   return (
-    <>
-      <h1>Poke Log</h1>
-      <div>
+    <div className="pokelog-container">
+      <h1 className="pokelog-title">Poke Log</h1>
+
+      <div className="pokelog-section">
         <h2>Incoming Pokes</h2>
         {pokes.length === 0 ? (
           <p>No new pokes received.</p>
         ) : (
-          <ul>
+          <ul className="pokelog-list">
             {pokes.map((poke) => (
-              <li key={poke.id}>
-                From: {poke.fromUserId}
+              <li key={poke.id} className="pokelog-item">
+                <div className="pokelog-sender">
+                  From: {poke.senderName || poke.fromUserId}
+                </div>
                 {!poke.conversationId ? (
-                  <button onClick={() => handlePokeBack(poke)}>
+                  <button
+                    className="pokelog-button"
+                    onClick={() => handlePokeBack(poke)}
+                  >
                     Poke Back
                   </button>
                 ) : (
-                  <button onClick={() => handleStartChat(poke.conversationId)}>
+                  <button
+                    className="pokelog-button"
+                    onClick={() => handleStartChat(poke.conversationId)}
+                  >
                     Chat
                   </button>
                 )}
@@ -91,48 +101,50 @@ const PokeLog = () => {
           </ul>
         )}
       </div>
-      <div>
+      <div className="pokelog-section">
         <h2>Outgoing Pokes</h2>
         {outgoingPokes.length === 0 ? (
           <p>No pending pokes sent.</p>
         ) : (
-          <ul>
+          <ul className="pokelog-list">
             {outgoingPokes.map((poke) => (
-              <li key={poke.id}>
+              <li key={poke.id} className="pokelog-item">
                 To: {poke.toUserId} – Status: {poke.status}
               </li>
             ))}
           </ul>
         )}
       </div>
-      <div>
-        <h2>Reciprocated Pokes</h2>
-        {reciprocatedPokes.length === 0 ? (
-          <p>No reciprocated pokes.</p>
-        ) : (
-          <ul>
-            {reciprocatedPokes.map((poke) => (
-              <li key={poke.id}>
-                {poke.fromUserId === userId ? (
-                  <>
-                    You poked {poke.toUserId} –{" "}
-                    <button
-                      onClick={() =>
-                        handleStartChat(poke.conversationId || poke.id)
-                      }
-                    >
-                      Start Chat
-                    </button>
-                  </>
-                ) : (
-                  <>From {poke.fromUserId} – Not your turn</>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </>
+      {/* <div className="pokelog-section">
+            
+            <h2>Reciprocated Pokes</h2>
+            {reciprocatedPokes.length === 0 ? (
+            <p>No reciprocated pokes.</p>
+            ) : (
+             <ul className="pokelog-list">
+                {reciprocatedPokes.map((poke) => (
+                <li key={poke.id} className="pokelog-item">
+                    {poke.fromUserId === userId ? (
+                    <>
+                        You poked {poke.toUserId} –{" "}
+                        <button
+                        className="pokelog-button"
+                        onClick={() =>
+                            handleStartChat(poke.conversationId || poke.id)
+                        }
+                        >
+                        Start Chat
+                        </button>
+                    </>
+                    ) : (
+                    <>From {poke.fromUserId} – Not your turn</>
+                    )}
+                </li>
+                ))}
+            </ul>
+            )}
+        </div> */}
+    </div>
   );
 };
 

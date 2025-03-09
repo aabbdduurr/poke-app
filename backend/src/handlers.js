@@ -219,35 +219,60 @@ module.exports.getNearbyUsers = async (event) => {
   }
 };
 
-// POST /poke
+// handlers.js
+
 module.exports.sendPoke = async (event) => {
   const tokenPayload = verifyToken(event);
   if (!tokenPayload) {
     return response(401, { error: "Unauthorized" });
   }
+
   const data = JSON.parse(event.body);
   if (!data.fromUserId || !data.toUserId) {
     return response(400, { error: "fromUserId and toUserId are required" });
   }
+
+  // Helper to fetch a user from the USERS_TABLE
+  const getUserById = async (userId) => {
+    const params = {
+      TableName: process.env.USERS_TABLE,
+      Key: { id: userId },
+    };
+    const result = await dynamoDb.get(params).promise();
+    return result.Item;
+  };
+
+  // Fetch the "from" and "to" user records to get their names
+  const [fromUser, toUser] = await Promise.all([
+    getUserById(data.fromUserId),
+    getUserById(data.toUserId),
+  ]);
+
+  // Create the initial poke item with user names attached
   const poke = {
     id: uuidv4(),
     fromUserId: data.fromUserId,
+    fromUserName: fromUser ? fromUser.name : data.fromUserId,
     toUserId: data.toUserId,
+    toUserName: toUser ? toUser.name : data.toUserId,
     timestamp: new Date().toISOString(),
     status: "pending",
   };
+
   const pokeParams = {
     TableName: process.env.POKES_TABLE,
     Item: poke,
   };
+
   try {
+    // Put the new poke in the table
     await dynamoDb.put(pokeParams).promise();
 
-    // Check for reciprocal poke
+    // Check if there's a reciprocal poke from the other side
     const reciprocalParams = {
       TableName: process.env.POKES_TABLE,
       FilterExpression:
-        "fromUserId = :to and toUserId = :from and #status = :pending",
+        "fromUserId = :to AND toUserId = :from AND #status = :pending",
       ExpressionAttributeNames: { "#status": "status" },
       ExpressionAttributeValues: {
         ":to": data.toUserId,
@@ -255,7 +280,10 @@ module.exports.sendPoke = async (event) => {
         ":pending": "pending",
       },
     };
+
     const reciprocalResult = await dynamoDb.scan(reciprocalParams).promise();
+
+    // If we find a reciprocal poke, accept both and create a conversation
     if (reciprocalResult.Items && reciprocalResult.Items.length > 0) {
       const updatePoke = async (pokeItem) => {
         const updateParams = {
@@ -267,42 +295,33 @@ module.exports.sendPoke = async (event) => {
         };
         await dynamoDb.update(updateParams).promise();
       };
+
+      // Mark both pokes as accepted
       await updatePoke(poke);
       await updatePoke(reciprocalResult.Items[0]);
 
-      // Fetch user names from USERS_TABLE for both users
-      const getUserById = async (userId) => {
-        const params = {
-          TableName: process.env.USERS_TABLE,
-          Key: { id: userId },
-        };
-        const result = await dynamoDb.get(params).promise();
-        return result.Item;
-      };
-
-      const [userFrom, userTo] = await Promise.all([
-        getUserById(data.fromUserId),
-        getUserById(data.toUserId),
-      ]);
-
-      // Create conversation record and include names
+      // Create conversation record (including user names)
       const conversation = {
         id: uuidv4(),
         user1Id: data.fromUserId,
-        user1Name: userFrom ? userFrom.name : data.fromUserId,
+        user1Name: fromUser ? fromUser.name : data.fromUserId,
         user2Id: data.toUserId,
-        user2Name: userTo ? userTo.name : data.toUserId,
-        // Determine whose turn it is: only the original sender (data.fromUserId) can start
-        turn: data.fromUserId,
+        user2Name: toUser ? toUser.name : data.toUserId,
+        // Decide whose turn it is to start
+        turn: data.toUserId,
         createdAt: new Date().toISOString(),
       };
+
       const convParams = {
         TableName: process.env.CONVERSATIONS_TABLE,
         Item: conversation,
       };
       await dynamoDb.put(convParams).promise();
+
       return response(201, { poke, conversation });
     }
+
+    // Otherwise, return just the poke (no conversation yet)
     return response(201, { poke });
   } catch (error) {
     console.error(error);
@@ -404,6 +423,7 @@ module.exports.sendMessage = async (event) => {
   if (!tokenPayload) {
     return response(401, { error: "Unauthorized" });
   }
+
   const data = JSON.parse(event.body);
   if (!data.conversationId || !data.senderId || !data.content) {
     return response(400, {
@@ -413,38 +433,58 @@ module.exports.sendMessage = async (event) => {
   if (data.content.length > 100) {
     return response(400, { error: "Message exceeds 100 characters" });
   }
+
   // Retrieve conversation record
   const convParams = {
     TableName: process.env.CONVERSATIONS_TABLE,
     Key: { id: data.conversationId },
   };
+
   try {
     const convResult = await dynamoDb.get(convParams).promise();
     const conversation = convResult.Item;
+
     if (!conversation) {
       return response(404, { error: "Conversation not found" });
     }
+    // Check if it's the sender's turn
     if (conversation.turn !== data.senderId) {
       return response(400, { error: "Not your turn to send a message" });
     }
+
+    // (Optional) fetch sender name for the message
+    const getUserById = async (userId) => {
+      const params = {
+        TableName: process.env.USERS_TABLE,
+        Key: { id: userId },
+      };
+      const result = await dynamoDb.get(params).promise();
+      return result.Item;
+    };
+    const sender = await getUserById(data.senderId);
+
     // Create message record
     const message = {
       id: uuidv4(),
       conversationId: data.conversationId,
       senderId: data.senderId,
+      senderName: sender ? sender.name : data.senderId, // store senderName
       content: data.content,
       timestamp: new Date().toISOString(),
     };
+
     const messageParams = {
       TableName: process.env.MESSAGES_TABLE,
       Item: message,
     };
     await dynamoDb.put(messageParams).promise();
-    // Update conversation turn
+
+    // Update conversation turn to the other user
     const newTurn =
       conversation.user1Id === data.senderId
         ? conversation.user2Id
         : conversation.user1Id;
+
     const updateConvParams = {
       TableName: process.env.CONVERSATIONS_TABLE,
       Key: { id: data.conversationId },
@@ -453,6 +493,7 @@ module.exports.sendMessage = async (event) => {
       ReturnValues: "UPDATED_NEW",
     };
     await dynamoDb.update(updateConvParams).promise();
+
     return response(201, { message });
   } catch (error) {
     console.error(error);
