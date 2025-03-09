@@ -85,6 +85,13 @@ functions:
           path: pokes/incoming
           method: get
           cors: true
+  getOutgoingPokes:
+    handler: src/handlers.getOutgoingPokes
+    events:
+      - http:
+          path: pokes/outgoing
+          method: get
+          cors: true
   sendMessage:
     handler: src/handlers.sendMessage
     events:
