@@ -10,6 +10,20 @@ provider:
     CONVERSATIONS_TABLE: poke-conversations
     MESSAGES_TABLE: poke-messages
     JWT_SECRET: your_jwt_secret_here
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}/index/phone-index"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.POKES_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.CONVERSATIONS_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.MESSAGES_TABLE}"
+        - "arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.MESSAGES_TABLE}/index/conversationIndex"
 
 functions:
   login:
@@ -87,10 +101,76 @@ functions:
 
 resources:
   Resources:
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: poke-users
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: phone
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: phone-index
+            KeySchema:
+              - AttributeName: phone
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
+    PokesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: poke-pokes
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    ConversationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: poke-conversations
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    MessagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: poke-messages
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: conversationId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: conversationIndex
+            KeySchema:
+              - AttributeName: conversationId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        BillingMode: PAY_PER_REQUEST
+
     PokeFrontendBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: poke-frontend-bucket # Replace with a globally unique name or remove to let CloudFormation generate one
+        BucketName: poke-frontend-bucket # Replace with a globally unique name if needed
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
@@ -99,6 +179,7 @@ resources:
           BlockPublicPolicy: false
           IgnorePublicAcls: false
           RestrictPublicBuckets: false
+
     PokeFrontendBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -111,6 +192,7 @@ resources:
               Principal: "*"
               Action: "s3:GetObject"
               Resource: !Sub "${PokeFrontendBucket.Arn}/*"
+
   Outputs:
     PokeFrontendBucketName:
       Description: "The name of the frontend S3 bucket"
