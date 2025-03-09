@@ -1,8 +1,9 @@
 // Conversation.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { BACKEND_URL } from "../Constants";
+import "./Conversation.css"; // Create a corresponding CSS file
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -10,6 +11,7 @@ const Conversation = () => {
   const [input, setInput] = useState("");
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
+  const messagesEndRef = useRef(null);
 
   const fetchMessages = async () => {
     try {
@@ -28,6 +30,11 @@ const Conversation = () => {
     const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, [conversationId, token]);
+
+  useEffect(() => {
+    // Scroll to the bottom whenever messages change
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = async () => {
     if (input.length > 100) {
@@ -48,24 +55,33 @@ const Conversation = () => {
   };
 
   return (
-    <div>
-      <h1>Conversation</h1>
-      <div>
+    <div className="conversation-container">
+      <div className="messages-container">
         {messages.map((msg) => (
-          <div key={msg.id}>
-            <strong>{msg.senderId === userId ? "You" : msg.senderId}: </strong>
-            {msg.content}
+          <div
+            key={msg.id}
+            className={`message-bubble ${
+              msg.senderId === userId ? "sent" : "received"
+            }`}
+          >
+            {msg.senderId !== userId && (
+              <div className="sender-name">{msg.senderName || "Them"}</div>
+            )}
+            <div className="message-content">{msg.content}</div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
-      <input
-        type="text"
-        placeholder="Type your message (max 100 chars)"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        maxLength={100}
-      />
-      <button onClick={sendMessage}>Send</button>
+      <div className="input-container">
+        <input
+          type="text"
+          placeholder="Type your message (max 100 chars)"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          maxLength={100}
+        />
+        <button onClick={sendMessage}>Send</button>
+      </div>
     </div>
   );
 };
