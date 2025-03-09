@@ -2,20 +2,28 @@ service: poke-backend
 
 provider:
   name: aws
-  runtime: nodejs14.x
+  runtime: nodejs16.x
   region: us-east-1
   environment:
     USERS_TABLE: poke-users
     POKES_TABLE: poke-pokes
     CONVERSATIONS_TABLE: poke-conversations
     MESSAGES_TABLE: poke-messages
+    JWT_SECRET: your_jwt_secret_here
 
 functions:
-  register:
-    handler: src/handlers.register
+  login:
+    handler: src/handlers.login
     events:
       - http:
-          path: register
+          path: login
+          method: post
+          cors: true
+  verifyOtp:
+    handler: src/handlers.verifyOtp
+    events:
+      - http:
+          path: verify-otp
           method: post
           cors: true
   updateLocation:

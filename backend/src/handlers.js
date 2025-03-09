@@ -37,21 +37,36 @@ module.exports.login = async (event) => {
     return response(400, { error: "Phone number is required" });
   }
   // Query for user by phone (ensure a Global Secondary Index on phone exists)
-  const params = {
+  const queryParams = {
     TableName: process.env.USERS_TABLE,
     IndexName: "phone-index",
     KeyConditionExpression: "phone = :phone",
     ExpressionAttributeValues: { ":phone": phone },
   };
+  let user;
   try {
-    const result = await dynamoDb.query(params).promise();
+    const result = await dynamoDb.query(queryParams).promise();
     if (result.Items.length === 0) {
-      return response(404, { error: "User not found" });
+      // Auto-register the new user with default details
+      user = {
+        id: uuidv4(),
+        phone,
+        name: `User-${phone.slice(-4)}`, // default name based on last 4 digits
+        bio: "",
+        photoUrl: "",
+        createdAt: new Date().toISOString(),
+      };
+      const putParams = {
+        TableName: process.env.USERS_TABLE,
+        Item: user,
+      };
+      await dynamoDb.put(putParams).promise();
+    } else {
+      user = result.Items[0];
     }
-    const user = result.Items[0];
-    // Generate OTP (for demo, a random 4-digit number)
+    // Generate OTP (for demo purposes, a random 4-digit number)
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    // Update user record with OTP (in production, add an expiration)
+    // Update user record with OTP (in production, add expiration and more secure handling)
     const updateParams = {
       TableName: process.env.USERS_TABLE,
       Key: { id: user.id },
@@ -60,7 +75,7 @@ module.exports.login = async (event) => {
       ReturnValues: "UPDATED_NEW",
     };
     await dynamoDb.update(updateParams).promise();
-    // For demo, return the OTP (in production, send it via SMS)
+    // For demo purposes, return the OTP (in production, send it via SMS)
     return response(200, { message: "OTP sent", otp, userId: user.id });
   } catch (error) {
     console.error(error);
