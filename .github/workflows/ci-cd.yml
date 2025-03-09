@@ -41,6 +41,7 @@ jobs:
         run: |
           output=$(npx serverless deploy)
           echo "$output"
+          # Extract only the first API endpoint URL
           backendUrl=$(echo "$output" | grep -o 'https://[a-zA-Z0-9.-]*\.execute-api\.[a-zA-Z0-9-]*\.amazonaws\.com/[a-zA-Z0-9]*' | head -n 1)
           echo "Backend URL: $backendUrl"
           echo "backendUrl=$backendUrl" >> $GITHUB_OUTPUT
@@ -81,7 +82,7 @@ jobs:
       - name: Deploy frontend to S3
         uses: jakejarvis/s3-sync-action@v0.5.1
         with:
-          args: --acl public-read --follow-symlinks
+          args: --follow-symlinks # Removed --acl public-read because the bucket doesn't allow ACLs
         env:
           AWS_S3_BUCKET: ${{ needs.deploy-backend.outputs.bucketName }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
