@@ -90,7 +90,19 @@ resources:
     PokeFrontendBucket:
       Type: AWS::S3::Bucket
       Properties:
-        AccessControl: PublicRead
+        BucketName: poke-frontend-bucket
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
+    PokeFrontendBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref PokeFrontendBucket
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadGetObject
+              Effect: Allow
+              Principal: "*"
+              Action: "s3:GetObject"
+              Resource: !Sub "${PokeFrontendBucket.Arn}/*"
