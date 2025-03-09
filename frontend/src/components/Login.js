@@ -30,7 +30,12 @@ function Login() {
       const { token, user } = response.data;
       localStorage.setItem("token", token);
       localStorage.setItem("userId", user.id);
-      navigate("/discovery");
+      // If the user has a default name, prompt for additional info
+      if (user.name.startsWith("User-") || !user.bio || !user.photoUrl) {
+        navigate("/complete-registration");
+      } else {
+        navigate("/discovery");
+      }
     } catch (error) {
       console.error("OTP verification failed", error);
     }

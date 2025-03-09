@@ -1,5 +1,20 @@
 service: poke-backend
 
+events:
+  - http:
+      path: login
+      method: post
+      cors:
+        origin: "*"
+        headers:
+          - Content-Type
+          - X-Amz-Date
+          - Authorization
+          - X-Api-Key
+          - X-Amz-Security-Token
+          - X-Amz-User-Agent
+        allowCredentials: false
+
 provider:
   name: aws
   runtime: nodejs16.x
@@ -24,6 +39,13 @@ functions:
     events:
       - http:
           path: verify-otp
+          method: post
+          cors: true
+  updateProfile:
+    handler: src/handlers.updateProfile
+    events:
+      - http:
+          path: update-profile
           method: post
           cors: true
   updateLocation:

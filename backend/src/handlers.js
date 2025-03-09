@@ -124,6 +124,48 @@ module.exports.verifyOtp = async (event) => {
   }
 };
 
+// POST /update-profile
+module.exports.updateProfile = async (event) => {
+  const data = JSON.parse(event.body);
+  // Verify token from Authorization header
+  const authHeader = event.headers.Authorization || event.headers.authorization;
+  if (!authHeader) {
+    return response(401, { error: "Unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+  let tokenPayload;
+  try {
+    tokenPayload = jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    return response(401, { error: "Invalid token" });
+  }
+
+  const { userId } = tokenPayload;
+  const { name, bio, photoUrl } = data;
+  if (!name) {
+    return response(400, { error: "Name is required" });
+  }
+  const params = {
+    TableName: process.env.USERS_TABLE,
+    Key: { id: userId },
+    UpdateExpression: "set #name = :name, bio = :bio, photoUrl = :photoUrl",
+    ExpressionAttributeNames: { "#name": "name" },
+    ExpressionAttributeValues: {
+      ":name": name,
+      ":bio": bio || "",
+      ":photoUrl": photoUrl || "",
+    },
+    ReturnValues: "UPDATED_NEW",
+  };
+  try {
+    const result = await dynamoDb.update(params).promise();
+    return response(200, { updated: result.Attributes });
+  } catch (error) {
+    console.error(error);
+    return response(500, { error: "Could not update profile" });
+  }
+};
+
 // POST /update-location
 module.exports.updateLocation = async (event) => {
   const data = JSON.parse(event.body);
