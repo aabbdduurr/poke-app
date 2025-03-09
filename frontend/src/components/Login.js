@@ -13,7 +13,7 @@ function Login() {
     e.preventDefault();
     try {
       const response = await axios.post(`${BACKEND_URL}/login`, { phone });
-      console.log("OTP sent: ", response.data.otp); // For demo purposes only
+      console.log("OTP sent: ", response.data.otp); // Demo only; remove in production
       setOtpSent(true);
     } catch (error) {
       console.error("Login failed", error);
@@ -30,7 +30,7 @@ function Login() {
       const { token, user } = response.data;
       localStorage.setItem("token", token);
       localStorage.setItem("userId", user.id);
-      // If the user has a default name, prompt for additional info
+      // If user has a default name or missing info, send them to complete registration
       if (user.name.startsWith("User-") || !user.bio || !user.photoUrl) {
         navigate("/complete-registration");
       } else {

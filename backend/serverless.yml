@@ -1,20 +1,5 @@
 service: poke-backend
 
-events:
-  - http:
-      path: login
-      method: post
-      cors:
-        origin: "*"
-        headers:
-          - Content-Type
-          - X-Amz-Date
-          - Authorization
-          - X-Api-Key
-          - X-Amz-Security-Token
-          - X-Amz-User-Agent
-        allowCredentials: false
-
 provider:
   name: aws
   runtime: nodejs16.x
@@ -33,7 +18,16 @@ functions:
       - http:
           path: login
           method: post
-          cors: true
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
   verifyOtp:
     handler: src/handlers.verifyOtp
     events:
@@ -90,3 +84,14 @@ functions:
           path: conversation/{conversationId}/messages
           method: get
           cors: true
+
+resources:
+  Resources:
+    PokeFrontendBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: poke-frontend-bucket
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html

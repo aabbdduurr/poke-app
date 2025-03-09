@@ -38,12 +38,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "us-east-1"
         run: |
-          # Deploy the backend and capture the output
           output=$(npx serverless deploy)
           echo "$output"
-          # Extract the API endpoint URL from the output.
-          # This grep command assumes serverless prints a line containing a URL like:
-          # "ServiceEndpoint: https://xyz.execute-api.us-east-1.amazonaws.com/dev"
           backendUrl=$(echo "$output" | grep -o 'https://[a-zA-Z0-9.-]*\.execute-api\.[a-zA-Z0-9-]*\.amazonaws\.com/[a-zA-Z0-9]*')
           echo "Backend URL: $backendUrl"
           echo "backendUrl=$backendUrl" >> $GITHUB_OUTPUT
@@ -64,19 +60,19 @@ jobs:
         working-directory: ./frontend
         run: npm install
 
-    #   - name: Build frontend
-    #     working-directory: ./frontend
-    #     env:
-    #       REACT_APP_BACKEND_URL: ${{ needs.deploy-backend.outputs.backendUrl }}
-    #     run: npm run build
+      - name: Build frontend
+        working-directory: ./frontend
+        env:
+          REACT_APP_BACKEND_URL: ${{ needs.deploy-backend.outputs.backendUrl }}
+        run: npm run build
 
-    #   - name: Deploy frontend to S3
-    #     uses: jakejarvis/s3-sync-action@v0.5.1
-    #     with:
-    #       args: --acl public-read --follow-symlinks
-    #     env:
-    #       AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-    #       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #       AWS_REGION: 'us-east-1'
-    #       SOURCE_DIR: './frontend/build'
+      - name: Deploy frontend to S3
+        uses: jakejarvis/s3-sync-action@v0.5.1
+        with:
+          args: --acl public-read --follow-symlinks
+        env:
+          AWS_S3_BUCKET: poke-frontend-bucket
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+          SOURCE_DIR: "./frontend/build"

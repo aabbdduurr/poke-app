@@ -17,7 +17,7 @@ const response = (statusCode, body) => ({
   body: JSON.stringify(body),
 });
 
-// Helper function to verify JWT token (if needed)
+// Helper function to verify JWT token for protected endpoints
 const verifyToken = (event) => {
   const authHeader = event.headers.Authorization || event.headers.authorization;
   if (!authHeader) return null;
@@ -29,14 +29,13 @@ const verifyToken = (event) => {
   }
 };
 
-// POST /login
+// POST /login (auto-register if needed)
 module.exports.login = async (event) => {
   const data = JSON.parse(event.body);
   const { phone } = data;
   if (!phone) {
     return response(400, { error: "Phone number is required" });
   }
-  // Query for user by phone (ensure a Global Secondary Index on phone exists)
   const queryParams = {
     TableName: process.env.USERS_TABLE,
     IndexName: "phone-index",
@@ -47,7 +46,7 @@ module.exports.login = async (event) => {
   try {
     const result = await dynamoDb.query(queryParams).promise();
     if (result.Items.length === 0) {
-      // Auto-register the new user with default details
+      // Auto-register new user with default values
       user = {
         id: uuidv4(),
         phone,
@@ -64,9 +63,8 @@ module.exports.login = async (event) => {
     } else {
       user = result.Items[0];
     }
-    // Generate OTP (for demo purposes, a random 4-digit number)
+    // Generate OTP (for demo purposes, a 4-digit number)
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    // Update user record with OTP (in production, add expiration and more secure handling)
     const updateParams = {
       TableName: process.env.USERS_TABLE,
       Key: { id: user.id },
@@ -75,7 +73,7 @@ module.exports.login = async (event) => {
       ReturnValues: "UPDATED_NEW",
     };
     await dynamoDb.update(updateParams).promise();
-    // For demo purposes, return the OTP (in production, send it via SMS)
+    // For demo, return OTP in response (in production, send via SMS)
     return response(200, { message: "OTP sent", otp, userId: user.id });
   } catch (error) {
     console.error(error);
@@ -90,7 +88,6 @@ module.exports.verifyOtp = async (event) => {
   if (!phone || !otp) {
     return response(400, { error: "Phone and OTP are required" });
   }
-  // Query for user by phone
   const params = {
     TableName: process.env.USERS_TABLE,
     IndexName: "phone-index",
@@ -113,7 +110,7 @@ module.exports.verifyOtp = async (event) => {
       UpdateExpression: "remove otp",
     };
     await dynamoDb.update(updateParams).promise();
-    // Generate a JWT token
+    // Generate JWT token valid for 1 hour
     const token = jwt.sign({ userId: user.id, phone: user.phone }, JWT_SECRET, {
       expiresIn: "1h",
     });
@@ -127,19 +124,10 @@ module.exports.verifyOtp = async (event) => {
 // POST /update-profile
 module.exports.updateProfile = async (event) => {
   const data = JSON.parse(event.body);
-  // Verify token from Authorization header
-  const authHeader = event.headers.Authorization || event.headers.authorization;
-  if (!authHeader) {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
     return response(401, { error: "Unauthorized" });
   }
-  const token = authHeader.split(" ")[1];
-  let tokenPayload;
-  try {
-    tokenPayload = jwt.verify(token, JWT_SECRET);
-  } catch (error) {
-    return response(401, { error: "Invalid token" });
-  }
-
   const { userId } = tokenPayload;
   const { name, bio, photoUrl } = data;
   if (!name) {
@@ -168,6 +156,10 @@ module.exports.updateProfile = async (event) => {
 
 // POST /update-location
 module.exports.updateLocation = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
   const data = JSON.parse(event.body);
   if (
     !data.userId ||
@@ -199,12 +191,17 @@ module.exports.updateLocation = async (event) => {
 
 // GET /users/nearby?lat=&lng=&radius=
 module.exports.getNearbyUsers = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
   const { lat, lng, radius } = event.queryStringParameters;
   const params = {
     TableName: process.env.USERS_TABLE,
   };
   try {
     const result = await dynamoDb.scan(params).promise();
+    // Filter users by distance (using a simple Euclidean approximation)
     const users = result.Items.filter((user) => {
       if (user.latitude && user.longitude) {
         const distance =
@@ -224,12 +221,14 @@ module.exports.getNearbyUsers = async (event) => {
 
 // POST /poke
 module.exports.sendPoke = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
   const data = JSON.parse(event.body);
   if (!data.fromUserId || !data.toUserId) {
     return response(400, { error: "fromUserId and toUserId are required" });
   }
-
-  // Create the new poke record
   const poke = {
     id: uuidv4(),
     fromUserId: data.fromUserId,
@@ -237,16 +236,14 @@ module.exports.sendPoke = async (event) => {
     timestamp: new Date().toISOString(),
     status: "pending",
   };
-
   const pokeParams = {
     TableName: process.env.POKES_TABLE,
     Item: poke,
   };
-
   try {
     await dynamoDb.put(pokeParams).promise();
 
-    // Check for reciprocal poke (a poke where the target already poked the sender)
+    // Check for reciprocal poke
     const reciprocalParams = {
       TableName: process.env.POKES_TABLE,
       FilterExpression:
@@ -259,9 +256,7 @@ module.exports.sendPoke = async (event) => {
       },
     };
     const reciprocalResult = await dynamoDb.scan(reciprocalParams).promise();
-
     if (reciprocalResult.Items && reciprocalResult.Items.length > 0) {
-      // Update both pokes to "accepted"
       const updatePoke = async (pokeItem) => {
         const updateParams = {
           TableName: process.env.POKES_TABLE,
@@ -274,8 +269,7 @@ module.exports.sendPoke = async (event) => {
       };
       await updatePoke(poke);
       await updatePoke(reciprocalResult.Items[0]);
-
-      // Create a conversation record. Assign the turn to the user who initiated the earlier poke.
+      // Create conversation record and set turn based on the earlier poke
       const conversation = {
         id: uuidv4(),
         user1Id: data.fromUserId,
@@ -291,10 +285,8 @@ module.exports.sendPoke = async (event) => {
         Item: conversation,
       };
       await dynamoDb.put(convParams).promise();
-
       return response(201, { poke, conversation });
     }
-
     return response(201, { poke });
   } catch (error) {
     console.error(error);
@@ -304,6 +296,10 @@ module.exports.sendPoke = async (event) => {
 
 // GET /pokes/incoming?userId=
 module.exports.getIncomingPokes = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
   const { userId } = event.queryStringParameters;
   const params = {
     TableName: process.env.POKES_TABLE,
@@ -322,37 +318,34 @@ module.exports.getIncomingPokes = async (event) => {
 
 // POST /message
 module.exports.sendMessage = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
   const data = JSON.parse(event.body);
-
   if (!data.conversationId || !data.senderId || !data.content) {
     return response(400, {
       error: "conversationId, senderId, and content are required",
     });
   }
-
   if (data.content.length > 100) {
     return response(400, { error: "Message exceeds 100 characters" });
   }
-
-  // Retrieve the conversation record
+  // Retrieve conversation record
   const convParams = {
     TableName: process.env.CONVERSATIONS_TABLE,
     Key: { id: data.conversationId },
   };
-
   try {
     const convResult = await dynamoDb.get(convParams).promise();
     const conversation = convResult.Item;
     if (!conversation) {
       return response(404, { error: "Conversation not found" });
     }
-
-    // Ensure it is the sender's turn
     if (conversation.turn !== data.senderId) {
       return response(400, { error: "Not your turn to send a message" });
     }
-
-    // Create the message record
+    // Create message record
     const message = {
       id: uuidv4(),
       conversationId: data.conversationId,
@@ -365,8 +358,7 @@ module.exports.sendMessage = async (event) => {
       Item: message,
     };
     await dynamoDb.put(messageParams).promise();
-
-    // Update conversation turn to the other user
+    // Update conversation turn
     const newTurn =
       conversation.user1Id === data.senderId
         ? conversation.user2Id
@@ -379,7 +371,6 @@ module.exports.sendMessage = async (event) => {
       ReturnValues: "UPDATED_NEW",
     };
     await dynamoDb.update(updateConvParams).promise();
-
     return response(201, { message });
   } catch (error) {
     console.error(error);
@@ -389,16 +380,19 @@ module.exports.sendMessage = async (event) => {
 
 // GET /conversation/{conversationId}/messages
 module.exports.getMessages = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
   const { conversationId } = event.pathParameters;
   const params = {
     TableName: process.env.MESSAGES_TABLE,
-    IndexName: "conversationIndex", // Ensure a GSI exists on conversationId
+    IndexName: "conversationIndex",
     KeyConditionExpression: "conversationId = :cid",
     ExpressionAttributeValues: {
       ":cid": conversationId,
     },
   };
-
   try {
     const result = await dynamoDb.query(params).promise();
     return response(200, { messages: result.Items });

@@ -16,6 +16,7 @@ function Discovery() {
             `${BACKEND_URL}/users/nearby?lat=${latitude}&lng=${longitude}&radius=5000`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
+          // Optionally filter out users already poked or in conversation with userId
           setUsers(response.data.users);
         } catch (error) {
           console.error("Error fetching nearby users", error);
@@ -48,6 +49,7 @@ function Discovery() {
           </li>
         ))}
       </ul>
+      {/* You can add a bottom tab component here for switching between chats and pokelist */}
     </div>
   );
 }
