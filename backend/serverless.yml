@@ -94,6 +94,11 @@ resources:
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
     PokeFrontendBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
