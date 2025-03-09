@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { BACKEND_URL } from "../Constants";
+import "./Chats.css"; // Assume you have a CSS file for theming
 
 const Chats = () => {
   const [chats, setChats] = useState([]);
@@ -16,7 +17,7 @@ const Chats = () => {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => {
-        // Sort chats by createdAt or last message timestamp (descending)
+        // Sort chats by createdAt (or last message timestamp)
         const sortedChats = response.data.chats.sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -26,14 +27,13 @@ const Chats = () => {
   }, [token, userId]);
 
   return (
-    <div>
+    <div className="chats-container">
       <h1>Your Chats</h1>
       {chats.length === 0 ? (
         <p>No active chats.</p>
       ) : (
-        <ul>
+        <ul className="chat-list">
           {chats.map((chat) => {
-            // Determine partner name and turn indicator
             const partnerName =
               chat.user1Id === userId
                 ? chat.user2Name || chat.user2Id
@@ -43,9 +43,11 @@ const Chats = () => {
             return (
               <li
                 key={chat.id}
+                className="chat-item"
                 onClick={() => navigate(`/conversation/${chat.id}`)}
               >
-                Chat with {partnerName} – {turnIndicator}
+                <div className="chat-partner">{partnerName}</div>
+                <div className="chat-turn-indicator">{turnIndicator}</div>
               </li>
             );
           })}

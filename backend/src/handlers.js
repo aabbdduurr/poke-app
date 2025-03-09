@@ -269,15 +269,31 @@ module.exports.sendPoke = async (event) => {
       };
       await updatePoke(poke);
       await updatePoke(reciprocalResult.Items[0]);
-      // Create conversation record and set turn based on the earlier poke
+
+      // Fetch user names from USERS_TABLE for both users
+      const getUserById = async (userId) => {
+        const params = {
+          TableName: process.env.USERS_TABLE,
+          Key: { id: userId },
+        };
+        const result = await dynamoDb.get(params).promise();
+        return result.Item;
+      };
+
+      const [userFrom, userTo] = await Promise.all([
+        getUserById(data.fromUserId),
+        getUserById(data.toUserId),
+      ]);
+
+      // Create conversation record and include names
       const conversation = {
         id: uuidv4(),
         user1Id: data.fromUserId,
+        user1Name: userFrom ? userFrom.name : data.fromUserId,
         user2Id: data.toUserId,
-        turn:
-          reciprocalResult.Items[0].timestamp < poke.timestamp
-            ? reciprocalResult.Items[0].fromUserId
-            : data.fromUserId,
+        user2Name: userTo ? userTo.name : data.toUserId,
+        // Determine whose turn it is: only the original sender (data.fromUserId) can start
+        turn: data.fromUserId,
         createdAt: new Date().toISOString(),
       };
       const convParams = {

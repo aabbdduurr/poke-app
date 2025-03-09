@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { BACKEND_URL } from "../Constants";
-import "./Conversation.css"; // Create a corresponding CSS file
+import "./Conversation.css";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -19,7 +19,11 @@ const Conversation = () => {
         `${BACKEND_URL}/conversation/${conversationId}/messages`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessages(response.data.messages);
+      // Sort messages by timestamp ascending (oldest first)
+      const sorted = response.data.messages.sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      );
+      setMessages(sorted);
     } catch (error) {
       console.error("Error fetching messages", error);
     }
@@ -32,7 +36,6 @@ const Conversation = () => {
   }, [conversationId, token]);
 
   useEffect(() => {
-    // Scroll to the bottom whenever messages change
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -54,6 +57,12 @@ const Conversation = () => {
     }
   };
 
+  // Utility to format timestamp to "HH:MM"
+  const formatTimestamp = (ts) => {
+    const date = new Date(ts);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
   return (
     <div className="conversation-container">
       <div className="messages-container">
@@ -68,6 +77,9 @@ const Conversation = () => {
               <div className="sender-name">{msg.senderName || "Them"}</div>
             )}
             <div className="message-content">{msg.content}</div>
+            <div className="message-timestamp">
+              {formatTimestamp(msg.timestamp)}
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
