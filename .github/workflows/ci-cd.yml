@@ -41,8 +41,7 @@ jobs:
         run: |
           output=$(npx serverless deploy)
           echo "$output"
-          # Extract the backend API endpoint from the deploy output
-          backendUrl=$(echo "$output" | grep -o 'https://[a-zA-Z0-9.-]*\.execute-api\.[a-zA-Z0-9-]*\.amazonaws\.com/[a-zA-Z0-9]*')
+          backendUrl=$(echo "$output" | grep -o 'https://[a-zA-Z0-9.-]*\.execute-api\.[a-zA-Z0-9-]*\.amazonaws\.com/[a-zA-Z0-9]*' | head -n 1)
           echo "Backend URL: $backendUrl"
           echo "backendUrl=$backendUrl" >> $GITHUB_OUTPUT
 
