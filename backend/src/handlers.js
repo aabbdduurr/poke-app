@@ -316,6 +316,27 @@ module.exports.getIncomingPokes = async (event) => {
   }
 };
 
+// GET /chats
+module.exports.getChats = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) return response(401, { error: "Unauthorized" });
+  const userId = tokenPayload.userId;
+  const params = {
+    TableName: process.env.CONVERSATIONS_TABLE,
+  };
+  try {
+    const result = await dynamoDb.scan(params).promise();
+    const chats = result.Items.filter(
+      (conv) => conv.user1Id === userId || conv.user2Id === userId
+    );
+    // Optionally, enhance each chat with the partner's name by fetching user data.
+    return response(200, { chats });
+  } catch (error) {
+    console.error(error);
+    return response(500, { error: "Could not fetch chats" });
+  }
+};
+
 // POST /message
 module.exports.sendMessage = async (event) => {
   const tokenPayload = verifyToken(event);

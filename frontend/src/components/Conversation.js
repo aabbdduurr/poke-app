@@ -1,9 +1,10 @@
+// Conversation.js
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { BACKEND_URL } from "../Constants";
 
-function Conversation() {
+const Conversation = () => {
   const { conversationId } = useParams();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -67,6 +68,6 @@ function Conversation() {
       <button onClick={sendMessage}>Send</button>
     </div>
   );
-}
+};
 
 export default Conversation;

@@ -91,6 +91,13 @@ functions:
           path: message
           method: post
           cors: true
+  getChats:
+    handler: src/handlers.getChats
+    events:
+      - http:
+          path: chats
+          method: get
+          cors: true
   getMessages:
     handler: src/handlers.getMessages
     events:
