@@ -1,4 +1,3 @@
-// PokeLog.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -7,19 +6,22 @@ import { BACKEND_URL } from "../Constants";
 const PokeLog = () => {
   const [pokes, setPokes] = useState([]);
   const [outgoingPokes, setOutgoingPokes] = useState([]);
+  const [reciprocatedPokes, setReciprocatedPokes] = useState([]);
   const token = localStorage.getItem("token");
   const userId = localStorage.getItem("userId");
   const navigate = useNavigate();
 
+  // Fetch incoming pending pokes
   useEffect(() => {
     axios
       .get(`${BACKEND_URL}/pokes/incoming?userId=${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((response) => setPokes(response.data.pokes))
-      .catch((error) => console.error("Error fetching pokes", error));
+      .catch((error) => console.error("Error fetching incoming pokes", error));
   }, [token, userId]);
 
+  // Fetch outgoing pending pokes
   useEffect(() => {
     axios
       .get(`${BACKEND_URL}/pokes/outgoing?userId=${userId}`, {
@@ -29,32 +31,34 @@ const PokeLog = () => {
       .catch((error) => console.error("Error fetching outgoing pokes", error));
   }, [token, userId]);
 
+  // Fetch reciprocated pokes (status accepted)
+  useEffect(() => {
+    axios
+      .get(`${BACKEND_URL}/pokes/reciprocated?userId=${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((response) => setReciprocatedPokes(response.data.pokes))
+      .catch((error) =>
+        console.error("Error fetching reciprocated pokes", error)
+      );
+  }, [token, userId]);
+
   const handleStartChat = (conversationId) => {
     navigate(`/conversation/${conversationId}`);
   };
 
   const handlePokeBack = (poke) => {
-    // When poking back, swap fromUserId and toUserId:
     axios
       .post(
         `${BACKEND_URL}/poke`,
         {
           fromUserId: userId, // current user pokes back
-          toUserId: poke.fromUserId, // poke sender becomes recipient
+          toUserId: poke.fromUserId, // original sender becomes recipient
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
       .then((response) => {
-        // Optionally update the poke list or navigate to chat if conversation is created
-        // For example, if response.data.conversation is returned, navigate to it:
-        if (response.data.conversation) {
-          navigate(`/conversation/${response.data.conversation.id}`);
-        } else {
-          // refresh poke list, etc.
-          alert("Poke back sent!");
-        }
+        alert("Poke back sent!");
       })
       .catch((error) => {
         console.error("Error sending poke back", error);
@@ -73,15 +77,13 @@ const PokeLog = () => {
             {pokes.map((poke) => (
               <li key={poke.id}>
                 From: {poke.fromUserId}
-                {poke.conversationId ? (
-                  // If a conversation exists, allow chat
-                  <button onClick={() => handleStartChat(poke.conversationId)}>
-                    Chat
-                  </button>
-                ) : (
-                  // Otherwise, allow the user to send a poke back
+                {!poke.conversationId ? (
                   <button onClick={() => handlePokeBack(poke)}>
                     Poke Back
+                  </button>
+                ) : (
+                  <button onClick={() => handleStartChat(poke.conversationId)}>
+                    Chat
                   </button>
                 )}
               </li>
@@ -98,6 +100,33 @@ const PokeLog = () => {
             {outgoingPokes.map((poke) => (
               <li key={poke.id}>
                 To: {poke.toUserId} – Status: {poke.status}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <h2>Reciprocated Pokes</h2>
+        {reciprocatedPokes.length === 0 ? (
+          <p>No reciprocated pokes.</p>
+        ) : (
+          <ul>
+            {reciprocatedPokes.map((poke) => (
+              <li key={poke.id}>
+                {poke.fromUserId === userId ? (
+                  <>
+                    You poked {poke.toUserId} –{" "}
+                    <button
+                      onClick={() =>
+                        handleStartChat(poke.conversationId || poke.id)
+                      }
+                    >
+                      Start Chat
+                    </button>
+                  </>
+                ) : (
+                  <>From {poke.fromUserId} – Not your turn</>
+                )}
               </li>
             ))}
           </ul>

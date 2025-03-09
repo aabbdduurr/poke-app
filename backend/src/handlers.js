@@ -338,6 +338,29 @@ module.exports.getOutgoingPokes = async (event) => {
   }
 };
 
+// GET /pokes/reciprocated?userId=
+module.exports.getReciprocatedPokes = async (event) => {
+  const tokenPayload = verifyToken(event);
+  if (!tokenPayload) {
+    return response(401, { error: "Unauthorized" });
+  }
+  const { userId } = event.queryStringParameters;
+  const params = {
+    TableName: process.env.POKES_TABLE,
+    FilterExpression:
+      "(fromUserId = :uid or toUserId = :uid) and #status = :accepted",
+    ExpressionAttributeNames: { "#status": "status" },
+    ExpressionAttributeValues: { ":uid": userId, ":accepted": "accepted" },
+  };
+  try {
+    const result = await dynamoDb.scan(params).promise();
+    return response(200, { pokes: result.Items });
+  } catch (error) {
+    console.error(error);
+    return response(500, { error: "Could not fetch reciprocated pokes" });
+  }
+};
+
 // GET /chats
 module.exports.getChats = async (event) => {
   const tokenPayload = verifyToken(event);

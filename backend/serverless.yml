@@ -92,6 +92,13 @@ functions:
           path: pokes/outgoing
           method: get
           cors: true
+  getReciprocatedPokes:
+    handler: src/handlers.getReciprocatedPokes
+    events:
+      - http:
+          path: pokes/reciprocated
+          method: get
+          cors: true
   sendMessage:
     handler: src/handlers.sendMessage
     events:
