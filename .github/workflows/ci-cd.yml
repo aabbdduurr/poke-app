@@ -101,10 +101,3 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "us-east-1"
           SOURCE_DIR: "./frontend/build"
-
-  output-cloudfront:
-    runs-on: ubuntu-latest
-    needs: deploy-backend
-    steps:
-      - name: Echo CloudFront Domain
-        run: echo "Frontend is available at: https://${{ needs.deploy-backend.outputs.cloudFrontDomain }}"
