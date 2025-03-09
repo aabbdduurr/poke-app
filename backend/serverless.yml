@@ -205,7 +205,7 @@ resources:
       Properties:
         DistributionConfig:
           Origins:
-            - DomainName: !Sub "${PokeFrontendBucket}.s3-website-${self:provider.region}.amazonaws.com"
+            - DomainName: !Sub "${PokeFrontendBucket}.s3-website-${AWS::Region}.amazonaws.com"
               Id: S3WebsiteOrigin
               CustomOriginConfig:
                 HTTPPort: 80
@@ -216,9 +216,14 @@ resources:
           DefaultCacheBehavior:
             TargetOriginId: S3WebsiteOrigin
             ViewerProtocolPolicy: redirect-to-https
-            AllowedMethods: [GET, HEAD, OPTIONS]
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
             ForwardedValues:
               QueryString: false
+          PriceClass: PriceClass_100
+
   Outputs:
     PokeFrontendBucketName:
       Description: "The name of the frontend S3 bucket"
