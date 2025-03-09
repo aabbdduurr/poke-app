@@ -90,7 +90,7 @@ resources:
     PokeFrontendBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: poke-frontend-bucket
+        BucketName: poke-frontend-bucket # Replace with a globally unique bucket name or remove this property to have CloudFormation generate one.
         WebsiteConfiguration:
           IndexDocument: index.html
           ErrorDocument: index.html
@@ -111,3 +111,7 @@ resources:
               Principal: "*"
               Action: "s3:GetObject"
               Resource: !Sub "${PokeFrontendBucket.Arn}/*"
+  Outputs:
+    PokeFrontendBucketName:
+      Description: "The name of the frontend S3 bucket"
+      Value: !Ref PokeFrontendBucket

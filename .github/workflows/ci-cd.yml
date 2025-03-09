@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backendUrl: ${{ steps.deploy-backend.outputs.backendUrl }}
+      bucketName: ${{ steps.get-bucket.outputs.bucketName }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -40,9 +41,21 @@ jobs:
         run: |
           output=$(npx serverless deploy)
           echo "$output"
+          # Extract the backend API endpoint from the deploy output
           backendUrl=$(echo "$output" | grep -o 'https://[a-zA-Z0-9.-]*\.execute-api\.[a-zA-Z0-9-]*\.amazonaws\.com/[a-zA-Z0-9]*')
           echo "Backend URL: $backendUrl"
           echo "backendUrl=$backendUrl" >> $GITHUB_OUTPUT
+
+      - name: Get S3 Bucket Name from CloudFormation
+        id: get-bucket
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+        run: |
+          bucketName=$(aws cloudformation describe-stacks --stack-name poke-backend-dev --query "Stacks[0].Outputs[?OutputKey=='PokeFrontendBucketName'].OutputValue" --output text)
+          echo "Bucket Name: $bucketName"
+          echo "bucketName=$bucketName" >> $GITHUB_OUTPUT
 
   build-frontend:
     needs: deploy-backend
@@ -71,7 +84,7 @@ jobs:
         with:
           args: --acl public-read --follow-symlinks
         env:
-          AWS_S3_BUCKET: poke-frontend-bucket
+          AWS_S3_BUCKET: ${{ needs.deploy-backend.outputs.bucketName }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "us-east-1"
