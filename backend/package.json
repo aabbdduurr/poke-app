@@ -1,0 +1,17 @@
+{
+  "name": "poke-backend",
+  "version": "1.0.0",
+  "description": "Backend for Poke app using AWS Lambda",
+  "main": "src/handlers.js",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1234.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "serverless": "^3.0.0"
+  }
+}
