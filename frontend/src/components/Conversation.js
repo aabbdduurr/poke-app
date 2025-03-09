@@ -7,11 +7,14 @@ function Conversation() {
   const { conversationId } = useParams();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userId");
 
   const fetchMessages = async () => {
     try {
       const response = await axios.get(
-        `${BACKEND_URL}/conversation/${conversationId}/messages`
+        `${BACKEND_URL}/conversation/${conversationId}/messages`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setMessages(response.data.messages);
     } catch (error) {
@@ -21,9 +24,9 @@ function Conversation() {
 
   useEffect(() => {
     fetchMessages();
-    const interval = setInterval(fetchMessages, 5000); // Polling every 5 seconds for demo
+    const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
-  }, [conversationId]);
+  }, [conversationId, token]);
 
   const sendMessage = async () => {
     if (input.length > 100) {
@@ -31,12 +34,11 @@ function Conversation() {
       return;
     }
     try {
-      // Again, the current user id would normally come from your auth state
-      await axios.post(`${BACKEND_URL}/message`, {
-        conversationId,
-        senderId: "current-user-id",
-        content: input,
-      });
+      await axios.post(
+        `${BACKEND_URL}/message`,
+        { conversationId, senderId: userId, content: input },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setInput("");
       fetchMessages();
     } catch (error) {
@@ -50,7 +52,7 @@ function Conversation() {
       <div>
         {messages.map((msg) => (
           <div key={msg.id}>
-            <strong>{msg.senderName}: </strong>
+            <strong>{msg.senderId === userId ? "You" : msg.senderId}: </strong>
             {msg.content}
           </div>
         ))}

@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { BACKEND_URL } from "../Constants";
 
 function Discovery() {
   const [users, setUsers] = useState([]);
+  const token = localStorage.getItem("token");
+  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
-    // Get current geolocation and fetch nearby users
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (position) => {
         const { latitude, longitude } = position.coords;
         try {
           const response = await axios.get(
-            `${BACKEND_URL}/users/nearby?lat=${latitude}&lng=${longitude}&radius=5000`
+            `${BACKEND_URL}/users/nearby?lat=${latitude}&lng=${longitude}&radius=5000`,
+            { headers: { Authorization: `Bearer ${token}` } }
           );
           setUsers(response.data.users);
         } catch (error) {
@@ -19,16 +22,15 @@ function Discovery() {
         }
       });
     }
-  }, []);
+  }, [token]);
 
-  const handlePoke = async (userId) => {
+  const handlePoke = async (targetUserId) => {
     try {
-      // Assuming the logged-in user's id is managed in your state/auth logic
-      const fromUserId = "current-user-id";
-      await axios.post(`${BACKEND_URL}/poke`, {
-        fromUserId,
-        toUserId: userId,
-      });
+      await axios.post(
+        `${BACKEND_URL}/poke`,
+        { fromUserId: userId, toUserId: targetUserId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert("Poke sent!");
     } catch (error) {
       console.error("Error sending poke", error);
