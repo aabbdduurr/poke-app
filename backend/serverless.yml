@@ -200,7 +200,29 @@ resources:
               Action: "s3:GetObject"
               Resource: !Sub "${PokeFrontendBucket.Arn}/*"
 
+    PokeFrontendCloudFront:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: !Sub "${PokeFrontendBucket}.s3-website-${self:provider.region}.amazonaws.com"
+              Id: S3WebsiteOrigin
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginProtocolPolicy: http-only
+          Enabled: true
+          DefaultRootObject: index.html
+          DefaultCacheBehavior:
+            TargetOriginId: S3WebsiteOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            ForwardedValues:
+              QueryString: false
   Outputs:
     PokeFrontendBucketName:
       Description: "The name of the frontend S3 bucket"
       Value: !Ref PokeFrontendBucket
+    PokeFrontendCloudFrontDomain:
+      Description: "The CloudFront distribution domain for the frontend"
+      Value: !GetAtt PokeFrontendCloudFront.DomainName

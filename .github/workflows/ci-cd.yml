@@ -14,6 +14,7 @@ jobs:
     outputs:
       backendUrl: ${{ steps.deploy-backend.outputs.backendUrl }}
       bucketName: ${{ steps.get-bucket.outputs.bucketName }}
+      cloudFrontDomain: ${{ steps.get-cloudfront.outputs.cloudFrontDomain }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -57,6 +58,17 @@ jobs:
           echo "Bucket Name: $bucketName"
           echo "bucketName=$bucketName" >> $GITHUB_OUTPUT
 
+      - name: Get CloudFront Domain from CloudFormation
+        id: get-cloudfront
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+        run: |
+          cloudFrontDomain=$(aws cloudformation describe-stacks --stack-name poke-backend-dev --query "Stacks[0].Outputs[?OutputKey=='PokeFrontendCloudFrontDomain'].OutputValue" --output text)
+          echo "CloudFront Domain: $cloudFrontDomain"
+          echo "cloudFrontDomain=$cloudFrontDomain" >> $GITHUB_OUTPUT
+
   build-frontend:
     needs: deploy-backend
     runs-on: ubuntu-latest
@@ -82,10 +94,17 @@ jobs:
       - name: Deploy frontend to S3
         uses: jakejarvis/s3-sync-action@v0.5.1
         with:
-          args: --follow-symlinks # Removed --acl public-read because the bucket doesn't allow ACLs
+          args: --follow-symlinks
         env:
           AWS_S3_BUCKET: ${{ needs.deploy-backend.outputs.bucketName }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "us-east-1"
           SOURCE_DIR: "./frontend/build"
+
+  output-cloudfront:
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    steps:
+      - name: Echo CloudFront Domain
+        run: echo "Frontend is available at: https://${{ needs.deploy-backend.outputs.cloudFrontDomain }}"
