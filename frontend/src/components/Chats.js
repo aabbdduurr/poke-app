@@ -29,9 +29,8 @@ const Chats = () => {
           {chats.map((chat) => (
             <li
               key={chat.id}
-              onClick={() => navigate(`/conversation/${chat.id}`)}
+              onClick={() => navigate(`/app/conversation/${chat.id}`)}
             >
-              {/* Assume chat has user1Name and user2Name fields or compute the partner's name */}
               Chat with{" "}
               {chat.user1Id === userId
                 ? chat.user2Name || chat.user2Id

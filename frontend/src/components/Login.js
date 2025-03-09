@@ -1,3 +1,4 @@
+// Login.js
 import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -13,8 +14,7 @@ function Login() {
     e.preventDefault();
     try {
       const response = await axios.post(`${BACKEND_URL}/login`, { phone });
-      console.log("OTP sent: ", response.data.otp); // Demo only; remove in production
-      // show a toast or alert with the OTP
+      // For demo purposes, show the OTP (remove in production)
       window.alert(`OTP sent: ${response.data.otp}`);
       setOtpSent(true);
     } catch (error) {
@@ -32,11 +32,11 @@ function Login() {
       const { token, user } = response.data;
       localStorage.setItem("token", token);
       localStorage.setItem("userId", user.id);
-      // If user has a default name or missing info, send them to complete registration
+      // Navigate to discovery if profile is complete, otherwise complete registration.
       if (user.name.startsWith("User-") || !user.bio || !user.photoUrl) {
         navigate("/complete-registration");
       } else {
-        navigate("/discovery");
+        navigate("/app/discovery");
       }
     } catch (error) {
       console.error("OTP verification failed", error);
