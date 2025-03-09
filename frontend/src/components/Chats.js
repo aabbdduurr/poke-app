@@ -29,7 +29,7 @@ const Chats = () => {
           {chats.map((chat) => (
             <li
               key={chat.id}
-              onClick={() => navigate(`/app/conversation/${chat.id}`)}
+              onClick={() => navigate(`/conversation/${chat.id}`)}
             >
               Chat with{" "}
               {chat.user1Id === userId

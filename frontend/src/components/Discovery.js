@@ -52,7 +52,11 @@ const Discovery = () => {
       <div className="cards-container">
         {users.map((user) => (
           <div key={user.id} className="card">
-            <img src={user.photoUrl || "default-avatar.png"} alt={user.name} />
+            <img
+              src={user.photoUrl || "default-avatar.png"}
+              alt={user.name}
+              style={{ width: "80vw" }}
+            />
             <h2>{user.name}</h2>
             <p>{user.bio}</p>
             <button onClick={() => handlePoke(user.id)}>Poke</button>
